@@ -138,7 +138,7 @@ with tab1:
         
         try:
             df_preview = pd.read_csv(uploaded_file, nrows=5)
-            st.dataframe(df_preview, use_container_width=True)
+            st.dataframe(df_preview, width="stretch")
             
             # Informações do arquivo
             file_size_mb = uploaded_file.size / (1024 * 1024)
@@ -195,7 +195,7 @@ with tab1:
                 """, unsafe_allow_html=True)
                 
                 # Botão de processamento
-                if st.button("🚀 Iniciar Processamento", type="primary", use_container_width=True):
+                if st.button("🚀 Iniciar Processamento", type="primary", width="stretch"):
                     
                     # Cria arquivo temporário
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp:
@@ -257,7 +257,7 @@ with tab1:
                         
                         # Preview dos resultados
                         st.markdown("### 📊 Preview dos Resultados")
-                        st.dataframe(df_result.head(10), use_container_width=True)
+                        st.dataframe(df_result.head(10), width="stretch")
                         
                         # Download
                         csv_result = df_result.to_csv(index=False).encode('utf-8')
@@ -266,7 +266,7 @@ with tab1:
                             data=csv_result,
                             file_name=f"dados_processados_{int(time.time())}.csv",
                             mime="text/csv",
-                            use_container_width=True
+                            width="stretch"
                         )
                         
                     finally:
