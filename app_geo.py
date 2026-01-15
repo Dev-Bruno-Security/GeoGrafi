@@ -435,6 +435,6 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; font-size: 0.9em;">
     <p>GeoGrafi v1.0 | Processador de Dados Geográficos</p>
-    <p>Desenvolvido com ❤️ usando Streamlit</p>
+    <p>Desenvolvido por B.J</p>
 </div>
 """, unsafe_allow_html=True)
