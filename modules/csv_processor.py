@@ -23,7 +23,8 @@ class CSVProcessor:
         chunk_size: int = 1000,
         max_workers: int = 3,
         use_cache: bool = True,
-        cache_db: str = "cache.db"
+        cache_db: str = "cache.db",
+        col_mapping: Optional[Dict[str, str]] = None
     ):
         """
         Inicializa o processador
@@ -33,12 +34,14 @@ class CSVProcessor:
             max_workers: Número de workers para processamento paralelo
             use_cache: Usar cache local
             cache_db: Caminho do banco de cache
+            col_mapping: Mapeamento de colunas alternativas -> nomes esperados
         """
         self.chunk_size = chunk_size
         self.max_workers = max_workers
         self.cep_validator = CEPValidator(rate_limit_delay=0.15)
         self.geocoder = Geocoder(rate_limit_delay=1.5)
         self.cache_manager = CacheManager(cache_db) if use_cache else None
+        self.col_mapping = col_mapping or {}
         
         self.stats = {
             'total_rows': 0,
