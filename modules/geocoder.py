@@ -2,6 +2,8 @@
 Geocoder para buscar latitude e longitude usando Nominatim (OpenStreetMap)
 """
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import time
 from typing import Optional, Tuple, Dict
 import logging
@@ -13,9 +15,9 @@ class Geocoder:
     """Busca coordenadas usando Nominatim (OpenStreetMap)"""
     
     BASE_URL = "https://nominatim.openstreetmap.org/search"
-    TIMEOUT = 10
+    TIMEOUT = 20  # Aumentado para 20s
     RETRY_ATTEMPTS = 3
-    RETRY_DELAY = 2  # Nominatim é mais restritivo
+    RETRY_DELAY = 3  # Nominatim é mais restritivo
     
     def __init__(self, rate_limit_delay: float = 1.5, app_name: str = "GeoGrafi"):
         """
@@ -30,8 +32,27 @@ class Geocoder:
         self.app_name = app_name
         self.cache = {}
         self.headers = {
-            'User-Agent': f'{app_name}/1.0'
+            'User-Agent': f'{app_name}/1.0 (GeoGrafi Address Geocoding Application)',
+            'Accept': 'application/json',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8'
         }
+        
+        # Cria session com retry automático
+        self.session = requests.Session()
+        retry_strategy = Retry(
+            total=5,
+            backoff_factor=2,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"]
+        )
+        adapter = HTTPAdapter(
+            max_retries=retry_strategy,
+            pool_connections=10,
+            pool_maxsize=20
+        )
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+        self.session.headers.update(self.headers)
     
     def _apply_rate_limit(self):
         """Aplica rate limiting"""
@@ -130,12 +151,24 @@ class Geocoder:
                     'limit': 1
                 }
                 
-                response = requests.get(
-                    self.BASE_URL,
-                    params=params,
-                    headers=self.headers,
-                    timeout=self.TIMEOUT
-                )
+                # Usa session para melhor performance
+                try:
+                    response = self.session.get(
+                        self.BASE_URL,
+                        params=params,
+                        timeout=(10, 30),  # (connect timeout, read timeout)
+                        allow_redirects=True
+                    )
+                except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as conn_err:
+                    # Fallback para requests direto
+                    logger.warning(f"Session falhou, tentando requests direto: {type(conn_err).__name__}")
+                    response = requests.get(
+                        self.BASE_URL,
+                        params=params,
+                        headers=self.headers,
+                        timeout=(10, 30),
+                        allow_redirects=True
+                    )
                 
                 if response.status_code == 200:
                     data = response.json()

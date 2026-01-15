@@ -2,6 +2,8 @@
 Validador e buscador de CEP usando ViaCEP
 """
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import time
 from typing import Optional, Dict, Tuple
 import logging
@@ -13,9 +15,9 @@ class CEPValidator:
     """Valida e busca informações de CEP"""
     
     BASE_URL = "https://viacep.com.br/ws"
-    TIMEOUT = 10
+    TIMEOUT = 30  # Aumentado para 30s
     RETRY_ATTEMPTS = 3
-    RETRY_DELAY = 1
+    RETRY_DELAY = 2  # Aumentado para 2s
     
     def __init__(self, rate_limit_delay: float = 0.1):
         """
@@ -27,6 +29,29 @@ class CEPValidator:
         self.rate_limit_delay = rate_limit_delay
         self.last_request_time = 0
         self.cache = {}
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive'
+        }
+        
+        # Cria session com retry automático
+        self.session = requests.Session()
+        retry_strategy = Retry(
+            total=5,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"]
+        )
+        adapter = HTTPAdapter(
+            max_retries=retry_strategy,
+            pool_connections=10,
+            pool_maxsize=20
+        )
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+        self.session.headers.update(self.headers)
     
     def _apply_rate_limit(self):
         """Aplica rate limiting"""
@@ -65,7 +90,25 @@ class CEPValidator:
                 self._apply_rate_limit()
                 
                 url = f"{self.BASE_URL}/{cep_clean}/json/"
-                response = requests.get(url, timeout=self.TIMEOUT)
+                
+                # Tenta com session primeiro
+                try:
+                    response = self.session.get(
+                        url, 
+                        timeout=(10, 30),  # (connect timeout, read timeout)
+                        allow_redirects=True,
+                        verify=True
+                    )
+                except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as conn_err:
+                    # Se falhar, tenta com requests simples
+                    logger.warning(f"Tentativa {attempt + 1}/{self.RETRY_ATTEMPTS} - Session falhou, tentando requests direto: {type(conn_err).__name__}")
+                    response = requests.get(
+                        url,
+                        headers=self.headers,
+                        timeout=(10, 30),
+                        allow_redirects=True,
+                        verify=True
+                    )
                 
                 if response.status_code == 200:
                     data = response.json()
@@ -85,10 +128,13 @@ class CEPValidator:
                         continue
                     
             except requests.exceptions.RequestException as e:
-                logger.warning(f"Erro ao buscar CEP {cep}: {str(e)}")
+                error_type = type(e).__name__
+                logger.warning(f"Tentativa {attempt + 1}/{self.RETRY_ATTEMPTS} - Erro ao buscar CEP {cep}: {error_type}: {str(e)[:100]}")
                 if attempt < self.RETRY_ATTEMPTS - 1:
                     time.sleep(self.RETRY_DELAY)
                     continue
+                else:
+                    logger.error(f"CEP {cep} falhou após {self.RETRY_ATTEMPTS} tentativas")
         
         return None
     
