@@ -137,7 +137,44 @@ with tab1:
         st.markdown("### 👁️ Preview do arquivo")
         
         try:
-            df_preview = pd.read_csv(uploaded_file, nrows=5)
+            # Detecta encoding do arquivo
+            import chardet
+            uploaded_file.seek(0)
+            raw_data = uploaded_file.read(100000)
+            result = chardet.detect(raw_data)
+            encoding = result.get('encoding', 'utf-8')
+            confidence = result.get('confidence', 0.0)
+            
+            # Se confiança baixa, usa latin-1
+            if not encoding or confidence < 0.5:
+                encoding = 'latin-1'
+            
+            # Detecta delimitador
+            import csv
+            uploaded_file.seek(0)
+            sample = uploaded_file.read(8192).decode(encoding, errors='replace')
+            try:
+                sniffer = csv.Sniffer()
+                delimiter = sniffer.sniff(sample).delimiter
+            except:
+                delimiter = ','
+            
+            st.info(f"📝 Encoding: {encoding} (conf: {confidence:.2%}) | Delimitador: '{delimiter}'")
+            
+            # Reseta ponteiro do arquivo
+            uploaded_file.seek(0)
+            
+            # Lê preview com encoding e delimitador corretos
+            df_preview = pd.read_csv(
+                uploaded_file, 
+                nrows=5, 
+                encoding=encoding,
+                encoding_errors='replace',
+                on_bad_lines='warn',
+                delimiter=delimiter,
+                quotechar='"',
+                skipinitialspace=True
+            )
             st.dataframe(df_preview, width="stretch")
             
             # Informações do arquivo
@@ -315,7 +352,13 @@ with tab2:
     
     | Coluna | Descrição |
     |--------|-----------|
-    | CD_CEP_CORRETO | CEP corrigido (se necessário) |
+    | CD_CEP_CORRETO | CEP corrigido/validado |
+    | NM_LOGRADOURO_CORRETO | Logradouro correto do CEP validado |
+    | NM_BAIRRO_CORRETO | Bairro correto do CEP validado |
+    | NM_MUNICIPIO_CORRETO | Município correto do CEP validado |
+    | NM_UF_CORRETO | UF correta do CEP validado |
+    | DS_LATITUDE | Latitude do endereço |
+    | DS_LONGITUDE | Longitude do endereço |
     
     ### ⚡ Otimizações
     

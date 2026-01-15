@@ -10,8 +10,9 @@ import time
 from typing import Optional, Dict, Tuple
 import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.setLevel(logging.INFO)
 
 class CEPValidator:
     """Valida e busca informações de CEP"""

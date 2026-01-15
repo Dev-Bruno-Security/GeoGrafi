@@ -8,8 +8,9 @@ from typing import Optional, Dict, List
 import logging
 from datetime import datetime, timedelta
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.setLevel(logging.INFO)
 
 class CacheManager:
     """Gerencia cache local em SQLite"""

@@ -10,8 +10,9 @@ import time
 from typing import Optional, Tuple, Dict
 import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.setLevel(logging.INFO)
 
 class Geocoder:
     """Busca coordenadas usando Nominatim (OpenStreetMap)"""
