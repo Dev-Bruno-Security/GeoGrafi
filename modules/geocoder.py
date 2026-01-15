@@ -4,6 +4,8 @@ Geocoder para buscar latitude e longitude usando Nominatim (OpenStreetMap)
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import subprocess
+import json as json_lib
 import time
 from typing import Optional, Tuple, Dict
 import logging
@@ -60,6 +62,22 @@ class Geocoder:
         if elapsed < self.rate_limit_delay:
             time.sleep(self.rate_limit_delay - elapsed)
         self.last_request_time = time.time()
+    
+    def _get_via_curl(self, url: str) -> Optional[list]:
+        """Fallback usando curl via subprocess"""
+        try:
+            cmd = [
+                'curl', '-s', '--connect-timeout', '10', '--max-time', '30',
+                '-H', f'User-Agent: {self.app_name}/1.0',
+                '-H', 'Accept: application/json',
+                url
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=35)
+            if result.returncode == 0 and result.stdout:
+                return json_lib.loads(result.stdout)
+        except Exception as e:
+            logger.warning(f"Curl fallback falhou: {e}")
+        return None
     
     def search_by_cep(self, cep: str, city: str = "", state: str = "BR") -> Optional[Tuple[float, float]]:
         """
@@ -186,7 +204,22 @@ class Geocoder:
                         continue
                     
             except requests.exceptions.RequestException as e:
-                logger.warning(f"Erro ao buscar {query}: {str(e)}")
+                logger.warning(f"Erro ao buscar {query}: {str(e)[:100]}")
+                
+                # Tenta curl como último recurso na primeira tentativa
+                if attempt == 0:
+                    logger.info(f"🔄 Tentando curl fallback para: {query}")
+                    # Monta URL completa com parâmetros
+                    from urllib.parse import urlencode
+                    params_str = urlencode({'q': query, 'format': 'json', 'limit': 1})
+                    full_url = f"{self.BASE_URL}?{params_str}"
+                    
+                    data = self._get_via_curl(full_url)
+                    if data and len(data) > 0:
+                        result = (float(data[0]['lat']), float(data[0]['lon']))
+                        logger.info(f"✅ Coordenadas obtidas via curl: {result}")
+                        return result
+                
                 if attempt < self.RETRY_ATTEMPTS - 1:
                     time.sleep(self.RETRY_DELAY)
                     continue

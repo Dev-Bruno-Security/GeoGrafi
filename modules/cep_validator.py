@@ -4,6 +4,8 @@ Validador e buscador de CEP usando ViaCEP
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import subprocess
+import json as json_lib
 import time
 from typing import Optional, Dict, Tuple
 import logging
@@ -59,6 +61,22 @@ class CEPValidator:
         if elapsed < self.rate_limit_delay:
             time.sleep(self.rate_limit_delay - elapsed)
         self.last_request_time = time.time()
+    
+    def _get_via_curl(self, url: str) -> Optional[Dict]:
+        """Fallback usando curl via subprocess"""
+        try:
+            cmd = [
+                'curl', '-s', '--connect-timeout', '10', '--max-time', '30',
+                '-H', 'User-Agent: GeoGrafi/1.0',
+                '-H', 'Accept: application/json',
+                url
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=35)
+            if result.returncode == 0 and result.stdout:
+                return json_lib.loads(result.stdout)
+        except Exception as e:
+            logger.warning(f"Curl fallback falhou: {e}")
+        return None
     
     def search_cep(self, cep: str) -> Optional[Dict]:
         """
@@ -130,11 +148,21 @@ class CEPValidator:
             except requests.exceptions.RequestException as e:
                 error_type = type(e).__name__
                 logger.warning(f"Tentativa {attempt + 1}/{self.RETRY_ATTEMPTS} - Erro ao buscar CEP {cep}: {error_type}: {str(e)[:100]}")
+                
+                # Tenta curl como último recurso na primeira tentativa
+                if attempt == 0:
+                    logger.info(f"🔄 Tentando curl fallback para CEP {cep}...")
+                    data = self._get_via_curl(url)
+                    if data and not data.get('erro'):
+                        self.cache[cep_clean] = data
+                        logger.info(f"✅ CEP {cep} obtido via curl")
+                        return data
+                
                 if attempt < self.RETRY_ATTEMPTS - 1:
                     time.sleep(self.RETRY_DELAY)
                     continue
                 else:
-                    logger.error(f"CEP {cep} falhou após {self.RETRY_ATTEMPTS} tentativas")
+                    logger.error(f"CEP {cep} falhou após {self.RETRY_ATTEMPTS} tentativas (requests + curl)")
         
         return None
     
