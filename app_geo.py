@@ -151,9 +151,27 @@ with tab1:
             with col3:
                 st.metric("Linhas (preview)", len(df_preview))
             
-            # Verifica colunas obrigatórias
+            # Verifica colunas obrigatórias com mapeamento automático
             required_cols = ['CD_CEP', 'NM_LOGRADOURO', 'NM_BAIRRO', 'NM_MUNICIPIO', 'NM_UF']
-            missing_cols = [col for col in required_cols if col not in df_preview.columns]
+            alt_cols = {
+                'CD_CEP': ['NR_CEP', 'CEP', 'CD_CEP'],
+                'NM_LOGRADOURO': ['DS_ENDERECO', 'ENDERECO', 'LOGRADOURO', 'NM_LOGRADOURO'],
+                'NM_BAIRRO': ['DS_BAIRRO', 'BAIRRO', 'NM_BAIRRO'],
+                'NM_MUNICIPIO': ['NM_CIDADE', 'CIDADE', 'MUNICIPIO', 'NM_MUNICIPIO', 'DS_MUNICIPIO'],
+                'NM_UF': ['UF', 'ESTADO', 'NM_UF', 'DS_UF']
+            }
+            
+            col_mapping = {}
+            for required in required_cols:
+                if required in df_preview.columns:
+                    col_mapping[required] = required
+                    continue
+                for alt in alt_cols.get(required, []):
+                    if alt in df_preview.columns:
+                        col_mapping[required] = alt
+                        break
+            
+            missing_cols = [col for col in required_cols if col not in col_mapping]
             
             if missing_cols:
                 st.markdown(f"""
@@ -162,6 +180,14 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
             else:
+                used_alternatives = {req: src for req, src in col_mapping.items() if req != src}
+                if used_alternatives:
+                    mapping_text = '<br>'.join([f"{req} ⟵ {src}" for req, src in used_alternatives.items()])
+                    st.markdown(f"""
+                    <div class="info-box">
+                        <strong>ℹ️ Mapeamento automático aplicado:</strong><br>{mapping_text}
+                    </div>
+                    """, unsafe_allow_html=True)
                 st.markdown(f"""
                 <div class="success-box">
                     <strong>✅ Todas as colunas obrigatórias encontradas!</strong>
@@ -181,7 +207,8 @@ with tab1:
                         processor = CSVProcessor(
                             chunk_size=chunk_size,
                             max_workers=max_workers,
-                            use_cache=use_cache
+                            use_cache=use_cache,
+                            col_mapping=col_mapping
                         )
                         
                         # Barra de progresso

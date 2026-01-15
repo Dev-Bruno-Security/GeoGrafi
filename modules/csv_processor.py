@@ -126,9 +126,19 @@ class CSVProcessor:
         """Processa um chunk do CSV"""
         chunk = chunk.copy()
         
+        # Aplicar mapeamento de colunas se existir
+        if self.col_mapping:
+            for new_col, old_col in self.col_mapping.items():
+                if old_col in chunk.columns and new_col not in chunk.columns:
+                    chunk = chunk.rename(columns={old_col: new_col})
+        
         # Adiciona coluna para CEP corrigido se não existir
         if 'CD_CEP_CORRETO' not in chunk.columns:
             chunk['CD_CEP_CORRETO'] = None
+        if 'DS_LATITUDE' not in chunk.columns:
+            chunk['DS_LATITUDE'] = None
+        if 'DS_LONGITUDE' not in chunk.columns:
+            chunk['DS_LONGITUDE'] = None
         
         # Processa cada linha
         for idx, row in chunk.iterrows():
