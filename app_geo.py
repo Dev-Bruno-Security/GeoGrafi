@@ -24,31 +24,47 @@ st.set_page_config(
 st.markdown("""
 <style>
     .stMetric {
-        background-color: #f0f2f6;
-        padding: 10px;
-        border-radius: 5px;
+        background-color: #1e2028;
+        color: #e8ecf4;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #2f3340;
+    }
+    .stMetric label {
+        color: #e8ecf4 !important;
+    }
+    .stMetric p {
+        color: #8ab4ff !important;
+        font-size: 24px !important;
+        font-weight: bold !important;
     }
     .header-title {
-        color: #1f77b4;
+        color: #8ab4ff;
         text-align: center;
     }
     .success-box {
-        background-color: #d4edda;
+        background-color: #123226;
+        color: #d3f2e4;
         padding: 15px;
-        border-radius: 5px;
-        border-left: 4px solid #28a745;
+        border-radius: 8px;
+        border-left: 4px solid #2ecc71;
+        border-right: 1px solid #1f7a50;
     }
     .error-box {
-        background-color: #f8d7da;
+        background-color: #2f1b22;
+        color: #f6c1c8;
         padding: 15px;
-        border-radius: 5px;
-        border-left: 4px solid #dc3545;
+        border-radius: 8px;
+        border-left: 4px solid #e74c3c;
+        border-right: 1px solid #80333d;
     }
     .info-box {
-        background-color: #d1ecf1;
+        background-color: #132736;
+        color: #c7e9ff;
         padding: 15px;
-        border-radius: 5px;
+        border-radius: 8px;
         border-left: 4px solid #17a2b8;
+        border-right: 1px solid #0d4f63;
     }
 </style>
 """, unsafe_allow_html=True)
