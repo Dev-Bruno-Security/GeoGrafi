@@ -1,0 +1,22 @@
+# Bytecode e caches
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Ambientes virtuais e variáveis
+.venv/
+.env
+.env.*
+
+# Bancos e arquivos temporários
+*.db
+*.sqlite
+cache.db
+.cache/
+*.log
+
+# Streamlit
+.streamlit/
+
+# Sistema operacional
+.DS_Store
