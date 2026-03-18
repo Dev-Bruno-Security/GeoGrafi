@@ -1,255 +1,110 @@
-# Leitor de Arquivos CSV Grandes
+# GeoGrafi
 
-Aplicação Python para leitura eficiente de arquivos CSV muito grandes (até 1,5GB+) sem perda de dados. Suporta arquivos OpenOffice.org 1.1 (.csv).
+Aplicação Python para enriquecimento geográfico de arquivos CSV grandes.
 
-## 🚀 Características
+O fluxo principal valida e corrige CEPs, busca coordenadas e devolve um CSV enriquecido com processamento em chunks, cache local e interface Streamlit.
 
-- **Leitura em chunks**: Processa arquivos grandes em pedaços, economizando memória
-- **Detecção automática de encoding**: Identifica automaticamente a codificação do arquivo
-- **Detecção automática de delimitador**: Identifica vírgulas, ponto-e-vírgula, tabs, etc.
-- **Análise de dados**: Estatísticas descritivas, valores faltantes, tipos de dados
-- **Filtragem de dados**: Filtra e exporta apenas os dados necessários
-- **Sem perda de dados**: Tratamento robusto de erros e avisos sobre linhas problemáticas
-- **Interface interativa**: Menu fácil de usar no terminal
+## Principais recursos
 
-## 📋 Requisitos
+- Processamento em chunks para arquivos grandes
+- Detecção automática de encoding e delimitador
+- Validação de CEP com ViaCEP
+- Geocodificação com Nominatim (OpenStreetMap)
+- Cache local em SQLite para reduzir chamadas repetidas
+- Mapeamento automático de colunas comuns
+- Interface web com Streamlit para upload, processamento e download
 
-- Python 3.7 ou superior
-- pandas
-- chardet
+## Requisitos
 
-## 🔧 Instalação
+- Python 3.10+
+- Dependências em requirements.txt
 
-1. Clone ou baixe este repositório
-
-2. Instale as dependências:
-```bash
-pip install -r requirements.txt
-```
-
-## 💻 Uso Básico
-
-### Modo Interativo
-
-Execute o programa principal:
+## Instalação
 
 ```bash
-python csv_reader.py
+python -m pip install -r requirements.txt
 ```
 
-O programa irá:
-1. Solicitar o caminho do arquivo CSV
-2. Detectar automaticamente encoding e delimitador
-3. Mostrar informações do arquivo
-4. Apresentar um menu com opções interativas
+## Como executar
 
-### Modo Programático
+### App principal (recomendado)
 
-```python
-from csv_reader import CSVReader, CSVAnalyzer
-
-# Criar instância do leitor
-reader = CSVReader("seu_arquivo.csv")
-
-# Ver informações do arquivo
-info = reader.get_file_info()
-print(info)
-
-# Ler amostra dos dados
-sample = reader.read_sample(100)
-print(sample)
-
-# Processar arquivo em chunks
-for chunk in reader.read_in_chunks(chunk_size=10000):
-    # Processar cada chunk
-    print(f"Processando {len(chunk)} linhas")
-    # Seu processamento aqui...
-
-# Analisar dados
-analysis = reader.analyze_data(sample_size=50000)
-print(analysis)
-
-# Contar linhas
-total_rows = reader.count_rows()
-print(f"Total de linhas: {total_rows:,}")
+```bash
+streamlit run app_geo.py
 ```
 
-## 📊 Exemplos de Uso
+A interface abre no navegador e permite:
 
-### Exemplo 1: Ler arquivo grande
+1. Enviar um arquivo CSV
+2. Validar colunas obrigatórias (com mapeamento automático)
+3. Ajustar chunk size e workers
+4. Processar e baixar o CSV resultante
 
-```python
-from csv_reader import CSVReader
+### Smoke test de conectividade com APIs
 
-# Criar leitor
-reader = CSVReader("dados_ibge.csv")
-
-# Processar em chunks de 5000 linhas
-for i, chunk in enumerate(reader.read_in_chunks(5000), 1):
-    print(f"Chunk {i}: {len(chunk)} linhas")
-    # Processar dados...
+```bash
+python test_api_connection.py
 ```
 
-### Exemplo 2: Filtrar e exportar dados
+## Colunas esperadas no fluxo geográfico
 
-```python
-from csv_reader import CSVReader, CSVAnalyzer
+Obrigatórias no modelo canônico:
 
-reader = CSVReader("dados_completos.csv")
+- CD_CEP
+- NM_LOGRADOURO
+- NM_BAIRRO
+- NM_MUNICIPIO
+- NM_UF
 
-# Definir condição de filtro
-def filtro(df):
-    # Exemplo: filtrar apenas linhas onde População > 100000
-    return df['População'] > 100000
+Também são aceitos nomes alternativos (mapeamento automático), por exemplo:
 
-# Filtrar e salvar
-CSVAnalyzer.filter_data(
-    reader,
-    condition=filtro,
-    output_path="dados_filtrados.csv",
-    chunk_size=10000
-)
-```
+- CD_CEP: NR_CEP, CEP
+- NM_LOGRADOURO: DS_ENDERECO, ENDERECO, LOGRADOURO
+- NM_BAIRRO: DS_BAIRRO, BAIRRO
+- NM_MUNICIPIO: NM_CIDADE, CIDADE, MUNICIPIO, DS_MUNICIPIO
+- NM_UF: UF, ESTADO, DS_UF
 
-### Exemplo 3: Calcular estatísticas
+## Colunas adicionadas/atualizadas no resultado
 
-```python
-from csv_reader import CSVReader, CSVAnalyzer
+- CD_CEP_CORRETO
+- NM_LOGRADOURO_CORRETO
+- NM_BAIRRO_CORRETO
+- NM_MUNICIPIO_CORRETO
+- NM_UF_CORRETO
+- DS_LATITUDE
+- DS_LONGITUDE
 
-reader = CSVReader("dados.csv")
+## Estrutura do projeto
 
-# Calcular estatísticas das colunas numéricas
-stats = CSVAnalyzer.get_statistics(
-    reader,
-    columns=['População', 'PIB', 'Área'],
-    chunk_size=10000
-)
+- app_geo.py: interface Streamlit principal
+- modules/csv_processor.py: processamento em chunks e enriquecimento geográfico
+- modules/cep_validator.py: integração com ViaCEP
+- modules/geocoder.py: integração com Nominatim
+- modules/cache_manager.py: cache SQLite
+- test_api_connection.py: diagnóstico de conectividade
 
-print(stats)
-```
+## Modo legado (CSV genérico)
 
-### Exemplo 4: Converter e processar
+O repositório também mantém utilitários antigos para leitura genérica de CSV:
 
-```python
-from csv_reader import CSVReader
+- csv_reader.py
+- interface_visual.py
+- app_geo_simples.py
 
-reader = CSVReader("arquivo_original.csv")
+Esses arquivos continuam disponíveis, mas o fluxo recomendado para o produto atual é app_geo.py.
 
-# Função de processamento personalizada
-def processar_chunk(chunk):
-    # Remover colunas desnecessárias
-    chunk = chunk.drop(['coluna_indesejada'], axis=1)
-    
-    # Criar nova coluna
-    chunk['nova_coluna'] = chunk['coluna_a'] + chunk['coluna_b']
-    
-    # Filtrar valores
-    chunk = chunk[chunk['valor'] > 0]
-    
-    return chunk
+## Dicas de performance
 
-# Processar e salvar
-reader.process_and_save(
-    output_path="arquivo_processado.csv",
-    chunk_size=10000,
-    process_func=processar_chunk
-)
-```
+- Até 500 MB: chunk_size entre 2000 e 5000
+- 500 MB a 1.5 GB: chunk_size entre 1000 e 2000
+- Acima de 1.5 GB: chunk_size entre 500 e 1000
+- Mantenha cache ativado para reprocessamentos
 
-## 🎯 Funcionalidades Principais
+## Observações sobre APIs
 
-### CSVReader
+- ViaCEP e Nominatim têm políticas de uso e limite de requisição
+- O projeto aplica rate limiting e retries para reduzir falhas transitórias
 
-#### Métodos principais:
+## Licença
 
-- `get_file_info()`: Informações sobre o arquivo (tamanho, encoding, delimitador)
-- `read_in_chunks(chunk_size)`: Itera sobre o arquivo em chunks
-- `read_sample(n_rows)`: Lê apenas as primeiras N linhas
-- `count_rows()`: Conta o total de linhas
-- `get_column_names()`: Retorna lista de colunas
-- `analyze_data(sample_size)`: Análise estatística de uma amostra
-- `process_and_save()`: Processa e salva em novo arquivo
-
-### CSVAnalyzer
-
-#### Métodos principais:
-
-- `get_statistics()`: Calcula estatísticas descritivas
-- `filter_data()`: Filtra dados baseado em condição
-
-## 🛡️ Tratamento de Erros
-
-A aplicação inclui:
-- Detecção automática de encoding para evitar erros de leitura
-- Avisos sobre linhas problemáticas (`on_bad_lines='warn'`)
-- Tratamento de exceções com mensagens claras
-- Validação de existência do arquivo
-
-## ⚡ Otimização de Memória
-
-Para arquivos muito grandes:
-
-1. **Ajuste o chunk_size**: Menor = menos memória, mais lento
-   - Arquivos < 500MB: chunk_size=50000
-   - Arquivos 500MB-1GB: chunk_size=20000
-   - Arquivos > 1GB: chunk_size=10000
-
-2. **Use apenas colunas necessárias**:
-```python
-for chunk in reader.read_in_chunks(10000):
-    chunk = chunk[['coluna1', 'coluna2']]  # Apenas colunas necessárias
-    # Processar...
-```
-
-3. **Delete chunks após processamento**:
-```python
-for chunk in reader.read_in_chunks(10000):
-    # Processar chunk
-    del chunk  # Libera memória
-```
-
-## 📝 Notas Importantes
-
-- O arquivo original **nunca é modificado**
-- Todas as operações de escrita criam novos arquivos
-- A detecção de encoding é feita nos primeiros 100KB do arquivo
-- O programa assume que a primeira linha contém cabeçalhos
-
-## 🐛 Solução de Problemas
-
-### Erro de encoding
-Se o encoding não for detectado corretamente, você pode especificar manualmente:
-```python
-reader = CSVReader("arquivo.csv")
-reader.encoding = "latin-1"  # ou "iso-8859-1", "utf-16", etc.
-```
-
-### Erro de delimitador
-Se o delimitador não for detectado corretamente:
-```python
-reader = CSVReader("arquivo.csv")
-reader.delimiter = ";"  # ou "\t", "|", etc.
-```
-
-### Arquivo muito lento
-Reduza o chunk_size:
-```python
-for chunk in reader.read_in_chunks(5000):  # Chunks menores
-    # Processar...
-```
-
-## 📧 Suporte
-
-Para problemas ou dúvidas, verifique:
-1. Se o arquivo existe e o caminho está correto
-2. Se você tem permissões de leitura no arquivo
-3. Se há espaço em disco suficiente para operações de exportação
-4. Se todas as dependências estão instaladas
-
-## 🔄 Atualizações Futuras
-
-- [ ] Suporte para formatos Excel (.xlsx, .xls)
-- [ ] Interface gráfica (GUI)
-- [ ] Exportação para banco de dados
-- [ ] Visualização de gráficos
-- [ ] Suporte para arquivos comprimidos (.zip, .gz)
+Defina aqui a licença do projeto, se aplicável.

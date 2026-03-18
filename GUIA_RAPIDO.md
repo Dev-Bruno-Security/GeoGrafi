@@ -1,98 +1,70 @@
-# Guia Rápido - Leitor de CSV Grande
+# Guia Rápido - GeoGrafi
 
-## Instalação Rápida
+## 1) Instalação
 
 ```bash
-# 1. Instalar dependências
-pip install pandas chardet
+python -m pip install -r requirements.txt
+```
 
-# 2. Executar o programa
+## 2) Executar a interface principal
+
+```bash
+streamlit run app_geo.py
+```
+
+## 3) Fluxo em 1 minuto
+
+1. Abra a aba Processar
+2. Envie o CSV
+3. Confirme preview, encoding e delimitador detectados
+4. Ajuste chunk size e workers se necessário
+5. Clique em Iniciar Processamento
+6. Baixe o CSV enriquecido
+
+## Colunas canônicas esperadas
+
+- CD_CEP
+- NM_LOGRADOURO
+- NM_BAIRRO
+- NM_MUNICIPIO
+- NM_UF
+
+Observação: o app detecta colunas alternativas automaticamente (como CEP, NR_CEP, ENDERECO, BAIRRO, CIDADE, UF etc.).
+
+## Saída gerada
+
+- CD_CEP_CORRETO
+- NM_LOGRADOURO_CORRETO
+- NM_BAIRRO_CORRETO
+- NM_MUNICIPIO_CORRETO
+- NM_UF_CORRETO
+- DS_LATITUDE
+- DS_LONGITUDE
+
+## Configuração recomendada
+
+- Arquivo pequeno (< 500 MB): chunk_size 2000 a 5000, workers 3 a 6
+- Arquivo médio (500 MB a 1.5 GB): chunk_size 1000 a 2000, workers 2 a 4
+- Arquivo grande (> 1.5 GB): chunk_size 500 a 1000, workers 1 a 3
+
+## Diagnóstico rápido
+
+### Testar conectividade das APIs
+
+```bash
+python test_api_connection.py
+```
+
+### Limpar cache antigo
+
+Use o botão Limpar cache antigo na barra lateral da interface.
+
+## Modo legado (opcional)
+
+Se você quiser apenas leitura/análise genérica de CSV, ainda pode usar:
+
+```bash
 python csv_reader.py
 ```
 
-## Uso Mais Simples
-
-```python
-from csv_reader import CSVReader
-
-# Criar leitor
-reader = CSVReader("seu_arquivo.csv")
-
-# Ver amostra
-print(reader.read_sample(10))
-
-# Processar tudo
-for chunk in reader.read_in_chunks(10000):
-    print(f"Processando {len(chunk)} linhas")
-    # Seu código aqui
-```
-
-## Comandos Úteis
-
-### Ver informações do arquivo
-```python
-reader = CSVReader("arquivo.csv")
-info = reader.get_file_info()
-print(info)
-```
-
-### Contar linhas
-```python
-total = reader.count_rows()
-print(f"Total: {total:,} linhas")
-```
-
-### Exportar filtrado
-```python
-from csv_reader import CSVAnalyzer
-
-def meu_filtro(df):
-    return df['coluna'] > 100  # sua condição
-
-CSVAnalyzer.filter_data(reader, meu_filtro, "saida.csv")
-```
-
-### Calcular estatísticas
-```python
-stats = CSVAnalyzer.get_statistics(reader)
-print(stats)
-```
-
-## Problemas Comuns
-
-### "Encoding error"
-```python
-reader = CSVReader("arquivo.csv")
-reader.encoding = "latin-1"  # ou "iso-8859-1"
-```
-
-### "Delimiter error"
-```python
-reader = CSVReader("arquivo.csv")
-reader.delimiter = ";"  # ou "\t"
-```
-
-### Memória insuficiente
-```python
-# Use chunks menores
-for chunk in reader.read_in_chunks(5000):  # ao invés de 10000
-    # processar
-```
-
-## Ajuste de Performance
-
-| Tamanho do Arquivo | Chunk Size Recomendado |
-|-------------------|------------------------|
-| < 500 MB          | 50000                 |
-| 500 MB - 1 GB     | 20000                 |
-| 1 GB - 2 GB       | 10000                 |
-| > 2 GB            | 5000                  |
-
-## Exemplos Prontos
-
-Execute o arquivo de exemplos:
-```bash
-python exemplo_uso.py
-```
-
-Escolha um dos 6 exemplos práticos disponíveis!
+Mas para o produto atual, use app_geo.py.
